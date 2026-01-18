@@ -45,6 +45,12 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  void _resetCounter() {
+    setState(() {
+      _counter = 0; // ustawiamy zero
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,6 +83,11 @@ class _MyHomePageState extends State<MyHomePage> {
             onPressed: _incrementCounter,
             backgroundColor: Colors.orange,
             child: const Icon(Icons.thumb_up),
+          ),
+          FloatingActionButton(
+            onPressed: _resetCounter,
+            backgroundColor: Colors.grey,
+            child: const Icon(Icons.refresh),
           ),
         ],
       ),
