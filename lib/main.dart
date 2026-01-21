@@ -10,19 +10,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Aplikacja Pawła',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Pozdrawiamy z macbooka Gem i Paw'),
+      home: const MyHomePage(title: 'Aplikacja Pawła'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
   final String title;
 
   @override
@@ -33,16 +32,44 @@ class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
   int _totalClicks = 0;
 
+  // ==========================================
+  // TU JEST "MÓZG" APKI (LOGIKA)
+  // To musi być TUTAJ, nad słowem @override
+  // ==========================================
+
+  String get _feedbackMessage {
+    if (_counter == 0) return "Zacznij klikać, programisto!";
+    if (_counter > 0 && _counter <= 10) return "Dobry początek! 👍";
+    if (_counter > 10 && _counter <= 20)
+      return "Ale szalejesz! 🚀"; // Zmieniliśmy zakres do 20
+    if (_counter > 20) return "Aga, TY JESTEŚ MASZYNĄ! 🤖"; // NOWA LINIA
+    return "Jesteś na minusie? 😮";
+  }
+
+  Color get _cardColor {
+    if (_counter == 0) return Colors.white;
+    if (_counter > 0) return Colors.green.shade50;
+    return Colors.red.shade50;
+  }
+
+  IconData get _userIcon {
+    if (_counter == 0) return Icons.person;
+    if (_counter > 0) return Icons.sentiment_very_satisfied;
+    return Icons.sentiment_very_dissatisfied;
+  }
+
+  // ==========================================
+
   void _incrementCounter() {
     setState(() {
-      _counter = _counter + 5;
+      _counter++;
       _totalClicks++;
     });
   }
 
   void _decrementCounter() {
     setState(() {
-      _counter = _counter - 1;
+      _counter--;
       _totalClicks++;
     });
   }
@@ -50,14 +77,16 @@ class _MyHomePageState extends State<MyHomePage> {
   void _resetCounter() {
     setState(() {
       _counter = 0;
-      _totalClicks++;
     });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Licznik wyzerowany!')));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 97, 162, 206),
+      backgroundColor: Colors.blue.shade100,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
@@ -65,60 +94,98 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'klikaj teraz hahaha',
-              style: TextStyle(color: Colors.white70, fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            // TWOJA GWIAZDKA!
-            const Icon(Icons.stars, size: 80, color: Colors.amber),
-            const SizedBox(height: 10),
-            Text(
-              '$_counter',
-              style: TextStyle(
-                fontSize: 80,
-                fontWeight: FontWeight.bold,
-                color: _counter < 0 ? Colors.red : Colors.greenAccent,
-              ),
+          children: [
+            // DYNAMICZNA IKONA (LUDZIK)
+            CircleAvatar(
+              radius: 60,
+              backgroundColor: Colors.amber,
+              child: Icon(_userIcon, size: 80, color: Colors.white),
             ),
             const SizedBox(height: 20),
+
+            // DYNAMICZNY TEKST
             Text(
-              'SUMA KLIKNIĘĆ: $_totalClicks',
+              _feedbackMessage,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.5,
+                color: Colors.indigo,
               ),
             ),
-          ], // <-- Tutaj był błąd, teraz jest tylko jedno domknięcie listy!
+            const SizedBox(height: 10),
+
+            // KARTA Z WYNIKIEM
+            Card(
+              color: _cardColor,
+              elevation: 10,
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    const Text(
+                      'WYNIK OPERACJI:',
+                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                    ),
+                    Text(
+                      '$_counter',
+                      style: const TextStyle(
+                        fontSize: 80,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const Divider(),
+                    Text(
+                      'SUMA KLIKNIĘĆ: $_totalClicks',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // PRZYCISK RESETU
+            ElevatedButton.icon(
+              onPressed: _resetCounter,
+              icon: const Icon(Icons.refresh),
+              label: const Text('ZACZNIJ OD NOWA'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade100,
+                foregroundColor: Colors.red,
+              ),
+            ),
+          ],
         ),
       ),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: _decrementCounter,
-            backgroundColor: Colors.red,
-            tooltip: 'Odejmij',
-            child: const Icon(Icons.remove),
-          ),
-          const SizedBox(width: 10),
-          FloatingActionButton(
-            onPressed: _incrementCounter,
-            backgroundColor: Colors.orange,
-            tooltip: 'Dodaj',
-            child: const Icon(Icons.thumb_up),
-          ),
-          const SizedBox(width: 10),
-          FloatingActionButton(
-            onPressed: _resetCounter,
-            backgroundColor: const Color.fromARGB(255, 77, 9, 204),
-            tooltip: 'Reset',
-            child: const Icon(Icons.refresh),
-          ),
-        ],
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(left: 30),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            FloatingActionButton(
+              onPressed: _decrementCounter,
+              backgroundColor: Colors.red,
+              heroTag: "btn1",
+              child: const Icon(Icons.remove),
+            ),
+            const SizedBox(width: 10),
+            FloatingActionButton(
+              onPressed: _incrementCounter,
+              backgroundColor: Colors.orange,
+              heroTag: "btn2",
+              child: const Icon(Icons.thumb_up),
+            ),
+          ],
+        ),
       ),
     );
   }
