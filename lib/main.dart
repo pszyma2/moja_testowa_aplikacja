@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -29,42 +30,73 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  String _userName = ""; // Tu będziemy trzymać imię
+  final TextEditingController _nameController =
+      TextEditingController(); // Kontroler do pola tekstowego
+
   int _counter = 0;
   int _totalClicks = 0;
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+    // To uruchamia szafkę z pamięcią przy starcie apki
+  }
 
-  // ==========================================
-  // TU JEST "MÓZG" APKI (LOGIKA)
-  // To musi być TUTAJ, nad słowem @override
-  // ==========================================
+  // czy tutaj bedzie dobrze "nad getterami"
+  // Wczytywanie danych przy starcie
+  void _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _counter = prefs.getInt('counter') ?? 0;
+      _totalClicks = prefs.getInt('totalClicks') ?? 0;
+    });
+    _userName = prefs.getString('userName') ?? "";
+    _nameController.text = _userName; // To wpisze imię do okienka przy starcie
+  }
 
+  // Zapisywanie danych przy każdym kliknięciu
+  void _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt('counter', _counter);
+    prefs.setInt('totalClicks', _totalClicks);
+    prefs.setString('userName', _userName);
+  }
+
+  // Gettery hah
+  // LOGIKA KOMUNIKATÓW
   String get _feedbackMessage {
-    if (_counter == 0) return "Zacznij klikać, programisto!";
-    if (_counter > 0 && _counter <= 10) return "Dobry początek! 👍";
-    if (_counter > 10 && _counter <= 20)
-      return "Ale szalejesz! 🚀"; // Zmieniliśmy zakres do 20
-    if (_counter > 20) return "Aga, TY JESTEŚ MASZYNĄ! 🤖"; // NOWA LINIA
-    return "Jesteś na minusie? 😮";
+    // Jeśli imię jest puste, użyjemy słowa "Mistrzu"
+    String displayName = _userName.isEmpty ? "Mistrzu" : _userName;
+
+    if (_counter == 0) return "Zacznij klikać, $displayName!";
+    if (_counter <= 10) return "Dobry początek, $displayName! 👍";
+    if (_counter <= 20) return "Ale szalejesz, $displayName! 🚀";
+    return "$displayName, TY JESTEŚ MASZYNĄ! 🤖"; // Twoja wersja "Maszyny"
   }
 
-  Color get _cardColor {
-    if (_counter == 0) return Colors.white;
-    if (_counter > 0) return Colors.green.shade50;
-    return Colors.red.shade50;
+  // LOGIKA KOLORÓW KARTY
+  // LOGIKA KOLORÓW
+  Color get _userColor {
+    if (_counter <= 10) return Colors.blue;
+    if (_counter <= 20) return Colors.green;
+    return Colors.red;
   }
 
+  // LOGIKA IKON
   IconData get _userIcon {
-    if (_counter == 0) return Icons.person;
-    if (_counter > 0) return Icons.sentiment_very_satisfied;
+    if (_counter <= 10) return Icons.person;
+    if (_counter <= 20) return Icons.sentiment_very_satisfied;
+    if (_counter > 20) return Icons.sentiment_satisfied_alt_rounded;
     return Icons.sentiment_very_dissatisfied;
   }
-
-  // ==========================================
 
   void _incrementCounter() {
     setState(() {
       _counter++;
       _totalClicks++;
     });
+    _saveData();
   }
 
   void _decrementCounter() {
@@ -72,12 +104,14 @@ class _MyHomePageState extends State<MyHomePage> {
       _counter--;
       _totalClicks++;
     });
+    _saveData(); //ZAPISYWANIE W PRZYCISKACH
   }
 
   void _resetCounter() {
     setState(() {
       _counter = 0;
     });
+    _saveData(); //ZEROWANIE TEZ SIE ZAPISUJE
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Licznik wyzerowany!')));
@@ -91,81 +125,99 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // DYNAMICZNA IKONA (LUDZIK)
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: Colors.amber,
-              child: Icon(_userIcon, size: 80, color: Colors.white),
-            ),
-            const SizedBox(height: 20),
-
-            // DYNAMICZNY TEKST
-            Text(
-              _feedbackMessage,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.indigo,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // KARTA Z WYNIKIEM
-            Card(
-              color: _cardColor,
-              elevation: 10,
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    const Text(
-                      'WYNIK OPERACJI:',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                    Text(
-                      '$_counter',
-                      style: const TextStyle(
-                        fontSize: 80,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    const Divider(),
-                    Text(
-                      'SUMA KLIKNIĘĆ: $_totalClicks',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+      body: Container(
+        width: double.infinity,
+        color: Colors.blue.shade100,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 0. POLE TEKSTOWE DLA IMIENIA
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 10,
+                ),
+                child: TextField(
+                  controller: _nameController,
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(
+                    hintText: 'Wpisz imię...',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.white70,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _userName = value;
+                    });
+                    _saveData();
+                  },
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-
-            // PRZYCISK RESETU
-            ElevatedButton.icon(
-              onPressed: _resetCounter,
-              icon: const Icon(Icons.refresh),
-              label: const Text('ZACZNIJ OD NOWA'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade100,
-                foregroundColor: Colors.red,
+              // 1. TWOJE KOMUNIKATY (To co już masz)
+              Text(
+                _feedbackMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+
+              // 2. TWOJA KARTA (To co już masz)
+              Card(
+                elevation: 8,
+
+                // ... reszta Twojego kodu karty ...
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(30.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_userIcon, size: 80, color: _userColor),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'WYNIK OPERACJI:',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      Text(
+                        '$_counter',
+                        style: TextStyle(
+                          fontSize: 60,
+                          fontWeight: FontWeight.bold,
+                          color: _userColor,
+                        ),
+                      ),
+                      const Divider(),
+                      Text('SUMA KLIKNIĘĆ: $_totalClicks'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // 3. PRZYCISK RESETU (Uruchamia _resetCounter)
+              ElevatedButton.icon(
+                onPressed: _resetCounter,
+                icon: const Icon(Icons.refresh),
+                label: const Text('ZACZNIJ OD NOWA'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.red,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(left: 30),
         child: Row(
