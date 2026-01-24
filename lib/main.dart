@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/stats_page.dart';
+import 'screens/settings_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -30,21 +32,18 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _userName = ""; // Tu będziemy trzymać imię
-  final TextEditingController _nameController =
-      TextEditingController(); // Kontroler do pola tekstowego
+  String _userName = "";
+  final TextEditingController _nameController = TextEditingController();
 
   int _counter = 0;
   int _totalClicks = 0;
+
   @override
   void initState() {
     super.initState();
     _loadData();
-    // To uruchamia szafkę z pamięcią przy starcie apki
   }
 
-  // czy tutaj bedzie dobrze "nad getterami"
-  // Wczytywanie danych przy starcie
   void _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -52,10 +51,9 @@ class _MyHomePageState extends State<MyHomePage> {
       _totalClicks = prefs.getInt('totalClicks') ?? 0;
     });
     _userName = prefs.getString('userName') ?? "";
-    _nameController.text = _userName; // To wpisze imię do okienka przy starcie
+    _nameController.text = _userName;
   }
 
-  // Zapisywanie danych przy każdym kliknięciu
   void _saveData() async {
     final prefs = await SharedPreferences.getInstance();
     prefs.setInt('counter', _counter);
@@ -63,32 +61,24 @@ class _MyHomePageState extends State<MyHomePage> {
     prefs.setString('userName', _userName);
   }
 
-  // Gettery hah
-  // LOGIKA KOMUNIKATÓW
   String get _feedbackMessage {
-    // Jeśli imię jest puste, użyjemy słowa "Mistrzu"
     String displayName = _userName.isEmpty ? "Mistrzu" : _userName;
-
     if (_counter == 0) return "Zacznij klikać, $displayName!";
     if (_counter <= 10) return "Dobry początek, $displayName! 👍";
     if (_counter <= 20) return "Ale szalejesz, $displayName! 🚀";
-    return "$displayName, TY JESTEŚ MASZYNĄ! 🤖"; // Twoja wersja "Maszyny"
+    return "$displayName, TY JESTEŚ MASZYNĄ! 🤖";
   }
 
-  // LOGIKA KOLORÓW KARTY
-  // LOGIKA KOLORÓW
   Color get _userColor {
     if (_counter <= 10) return Colors.blue;
     if (_counter <= 20) return Colors.green;
     return Colors.red;
   }
 
-  // LOGIKA IKON
   IconData get _userIcon {
     if (_counter <= 10) return Icons.person;
     if (_counter <= 20) return Icons.sentiment_very_satisfied;
-    if (_counter > 20) return Icons.sentiment_satisfied_alt_rounded;
-    return Icons.sentiment_very_dissatisfied;
+    return Icons.sentiment_satisfied_alt_rounded;
   }
 
   void _incrementCounter() {
@@ -104,14 +94,14 @@ class _MyHomePageState extends State<MyHomePage> {
       _counter--;
       _totalClicks++;
     });
-    _saveData(); //ZAPISYWANIE W PRZYCISKACH
+    _saveData();
   }
 
   void _resetCounter() {
     setState(() {
       _counter = 0;
     });
-    _saveData(); //ZEROWANIE TEZ SIE ZAPISUJE
+    _saveData();
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Licznik wyzerowany!')));
@@ -143,17 +133,31 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
             ),
+            // DODANY PRZYCISK STATYSTYK (Aby import przestał być żółty)
             ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Strona Główna'),
+              title: const Text('Statystyki'),
+              leading: const Icon(Icons.bar_chart),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const StatsPage()),
+                );
+              },
+            ),
+            // PRZYCISK USTAWIEŃ
+            ListTile(
+              title: const Text('Ustawienia'),
+              leading: const Icon(Icons.settings),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsPage()),
+                );
               },
             ),
           ],
         ),
       ),
-
       body: Container(
         width: double.infinity,
         color: Colors.blue.shade100,
@@ -161,7 +165,6 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 0. POLE TEKSTOWE DLA IMIENIA
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 40,
@@ -184,8 +187,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                 ),
               ),
-
-              // 1. TWOJE KOMUNIKATY (To co już masz)
               Text(
                 _feedbackMessage,
                 textAlign: TextAlign.center,
@@ -196,12 +197,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // 2. TWOJA KARTA (To co już masz)
               Card(
                 elevation: 8,
-
-                // ... reszta Twojego kodu karty ...
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -231,8 +228,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               const SizedBox(height: 30),
-
-              // 3. PRZYCISK RESETU (Uruchamia _resetCounter)
               ElevatedButton.icon(
                 onPressed: _resetCounter,
                 icon: const Icon(Icons.refresh),
@@ -246,7 +241,6 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ),
-
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(left: 30),
         child: Row(
