@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/stats_page.dart';
 import 'screens/settings_page.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,33 +33,55 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _userName = "";
-  final TextEditingController _nameController = TextEditingController();
+  final AudioPlayer _player = AudioPlayer(); // Ten zostanie do muzyki
+  final AudioPlayer _kickPlayer = AudioPlayer(); // Ten będzie tylko do kopnięć
 
+  String _userName = "";
   int _counter = 0;
   int _totalClicks = 0;
 
   @override
+  @override
   void initState() {
     super.initState();
+    _kickPlayer.setPlayerMode(
+      PlayerMode.lowLatency,
+    ); // Ustawiamy go raz na zawsze na tryb szybki
     _loadData();
+  }
+
+  void _playKick() async {
+    try {
+      // Używamy dedykowanego odtwarzacza
+      await _kickPlayer
+          .stop(); // To jest klucz! Zatrzymuje poprzednie kopnięcie i zaczyna od nowa
+      await _kickPlayer.play(AssetSource('sounds/kick.mp3'));
+    } catch (e) {
+      debugPrint("Błąd dźwięku: $e");
+    }
   }
 
   void _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _counter = prefs.getInt('counter') ?? 0;
-      _totalClicks = prefs.getInt('totalClicks') ?? 0;
+      _userName = prefs.getString('activePlayer') ?? "Paweł";
+      _totalClicks = prefs.getInt('clicks_$_userName') ?? 0;
+      _counter = _totalClicks; // Odświeżamy licznik na ekranie!
     });
-    _userName = prefs.getString('userName') ?? "";
-    _nameController.text = _userName;
   }
 
   void _saveData() async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setInt('counter', _counter);
-    prefs.setInt('totalClicks', _totalClicks);
-    prefs.setString('userName', _userName);
+    String activePlayer = prefs.getString('activePlayer') ?? "Paweł";
+
+    await prefs.setInt('totalClicks', _totalClicks);
+    await prefs.setInt('clicks_$activePlayer', _totalClicks);
+
+    List<String> players = prefs.getStringList('all_players') ?? [];
+    if (!players.contains(activePlayer)) {
+      players.add(activePlayer);
+      await prefs.setStringList('all_players', players);
+    }
   }
 
   String get _feedbackMessage {
@@ -87,14 +110,16 @@ class _MyHomePageState extends State<MyHomePage> {
       _totalClicks++;
     });
     _saveData();
+    _playKick();
   }
 
   void _decrementCounter() {
     setState(() {
       _counter--;
-      _totalClicks++;
+      _totalClicks--;
     });
     _saveData();
+    _playKick();
   }
 
   void _resetCounter() {
@@ -133,18 +158,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
             ),
-            // DODANY PRZYCISK STATYSTYK (Aby import przestał być żółty)
             ListTile(
               title: const Text('Statystyki'),
               leading: const Icon(Icons.bar_chart),
               onTap: () {
                 Navigator.push(
                   context,
+                  // POPRAWIONE: Teraz prowadzi do StatsPage!
                   MaterialPageRoute(builder: (context) => const StatsPage()),
-                );
+                ).then((_) {
+                  _loadData();
+                });
               },
             ),
-            // PRZYCISK USTAWIEŃ
             ListTile(
               title: const Text('Ustawienia'),
               leading: const Icon(Icons.settings),
@@ -152,7 +178,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const SettingsPage()),
-                );
+                ).then((_) {
+                  _loadData();
+                });
               },
             ),
           ],
@@ -165,28 +193,6 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 40,
-                  vertical: 10,
-                ),
-                child: TextField(
-                  controller: _nameController,
-                  textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    hintText: 'Wpisz imię...',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.white70,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _userName = value;
-                    });
-                    _saveData();
-                  },
-                ),
-              ),
               Text(
                 _feedbackMessage,
                 textAlign: TextAlign.center,

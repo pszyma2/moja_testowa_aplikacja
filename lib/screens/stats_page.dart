@@ -1,78 +1,112 @@
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class StatsPage extends StatelessWidget {
+class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
 
-  // Funkcja, która idzie do "magazynu" po dane
-  Future<Map<String, int>> _getStats() async {
+  @override
+  State<StatsPage> createState() => _StatsPageState();
+}
+
+class _StatsPageState extends State<StatsPage> {
+  final AudioPlayer _statsPlayer = AudioPlayer();
+  List<Map<String, dynamic>> _playerResults = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _playBackgroundMusic();
+    _loadAllResults();
+  }
+
+  void _playBackgroundMusic() async {
+    try {
+      await _statsPlayer.setReleaseMode(ReleaseMode.loop);
+      await _statsPlayer.play(AssetSource('sounds/champions.mp3'));
+    } catch (e) {
+      debugPrint("Błąd muzyki: $e");
+    }
+  }
+
+  void _loadAllResults() async {
     final prefs = await SharedPreferences.getInstance();
-    return {
-      'counter': prefs.getInt('counter') ?? 0,
-      'total': prefs.getInt('totalClicks') ?? 0,
-    };
+    List<String> playerNames = prefs.getStringList('all_players') ?? ["Paweł"];
+    List<Map<String, dynamic>> results = [];
+
+    for (String name in playerNames) {
+      int score = prefs.getInt('clicks_$name') ?? 0;
+      results.add({'name': name, 'score': score});
+    }
+
+    results.sort((a, b) => b['score'].compareTo(a['score']));
+
+    setState(() {
+      _playerResults = results;
+    });
+  }
+
+  @override
+  void dispose() {
+    _statsPlayer.stop();
+    _statsPlayer.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Twoje Statystyki'),
-        backgroundColor: Colors.orange,
+        title: const Text("Tabela Ligi Mistrzów"),
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
       ),
-      body: FutureBuilder<Map<String, int>>(
-        future: _getStats(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final data = snapshot.data!;
-
-          return Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              children: [
-                _buildStatCard(
-                  'Obecny stan licznika',
-                  '${data['counter']}',
-                  Icons.calculate,
-                  Colors.blue,
-                ),
-                const SizedBox(height: 20),
-                _buildStatCard(
-                  'Suma wszystkich kliknięć',
-                  '${data['total']}',
-                  Icons.ads_click,
-                  Colors.green,
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // Pomocniczy "widżet", żeby nie pisać dwa razy tego samego kodu dla karty
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 4,
-      child: ListTile(
-        leading: Icon(icon, color: color, size: 40),
-        title: Text(title),
-        subtitle: Text(
-          value,
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
-            color: color,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.indigo.shade900, Colors.blue.shade100],
           ),
+        ),
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: _playerResults.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return const Card(
+                color: Colors.amber,
+                child: ListTile(
+                  leading: Icon(Icons.star, color: Colors.indigo),
+                  title: Text(
+                    "WYNIKI GRACZY",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              );
+            }
+
+            var player = _playerResults[index - 1];
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  index == 1 ? Icons.emoji_events : Icons.person,
+                  color: index == 1 ? Colors.amber : Colors.grey,
+                ),
+                title: Text(
+                  player['name'],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                trailing: Text(
+                  "${player['score']} pkt",
+                  style: const TextStyle(
+                    color: Colors.indigo,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
