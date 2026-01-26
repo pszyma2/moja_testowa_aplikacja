@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/stats_page.dart';
 import 'screens/settings_page.dart';
+import 'screens/onas_page.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 void main() {
@@ -33,40 +34,41 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final AudioPlayer _player = AudioPlayer(); // Ten zostanie do muzyki
-  final AudioPlayer _kickPlayer = AudioPlayer(); // Ten będzie tylko do kopnięć
+  // 1. Odtwarzacz stworzony raz, na samej górze
+  final AudioPlayer _player = AudioPlayer();
 
   String _userName = "";
   int _counter = 0;
   int _totalClicks = 0;
 
   @override
-  @override
   void initState() {
     super.initState();
-    _kickPlayer.setPlayerMode(
-      PlayerMode.lowLatency,
-    ); // Ustawiamy go raz na zawsze na tryb szybki
     _loadData();
   }
 
+  // 2. FUNKCJA GRAJĄCA - jej brakowało!
+
   void _playKick() async {
     try {
-      // Używamy dedykowanego odtwarzacza
-      await _kickPlayer
-          .stop(); // To jest klucz! Zatrzymuje poprzednie kopnięcie i zaczyna od nowa
-      await _kickPlayer.play(AssetSource('sounds/kick.mp3'));
+      await _player.play(AssetSource('sounds/kick.mp3'));
     } catch (e) {
-      debugPrint("Błąd dźwięku: $e");
+      debugPrint("Błąd dźwięku: $e"); // Zmienione z print na debugPrint
     }
   }
 
   void _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      // 1. Sprawdzamy kto teraz gra
       _userName = prefs.getString('activePlayer') ?? "Paweł";
+
+      // 2. Wczytujemy punkty konkretnie dla tej osoby
+      // To jest kluczowe: ustawiamy _totalClicks, ale też _counter!
       _totalClicks = prefs.getInt('clicks_$_userName') ?? 0;
-      _counter = _totalClicks; // Odświeżamy licznik na ekranie!
+
+      // DODAJ TĘ LINIĘ PONIŻEJ:
+      _counter = _totalClicks;
     });
   }
 
@@ -77,7 +79,11 @@ class _MyHomePageState extends State<MyHomePage> {
     await prefs.setInt('totalClicks', _totalClicks);
     await prefs.setInt('clicks_$activePlayer', _totalClicks);
 
+    // --- TO JEST TA NOWA CZĘŚĆ ---
+    // Pobieramy listę wszystkich imion, które już znamy
     List<String> players = prefs.getStringList('all_players') ?? [];
+
+    // Jeśli tego gracza jeszcze nie ma na liście, to go dopisujemy
     if (!players.contains(activePlayer)) {
       players.add(activePlayer);
       await prefs.setStringList('all_players', players);
@@ -110,7 +116,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _totalClicks++;
     });
     _saveData();
-    _playKick();
+    _playKick(); // GRA!
   }
 
   void _decrementCounter() {
@@ -119,7 +125,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _totalClicks--;
     });
     _saveData();
-    _playKick();
+    _playKick(); // GRA!
   }
 
   void _resetCounter() {
@@ -164,9 +170,9 @@ class _MyHomePageState extends State<MyHomePage> {
               onTap: () {
                 Navigator.push(
                   context,
-                  // POPRAWIONE: Teraz prowadzi do StatsPage!
                   MaterialPageRoute(builder: (context) => const StatsPage()),
                 ).then((_) {
+                  // Ta linia odpala się PO zamknięciu ustawień
                   _loadData();
                 });
               },
@@ -181,6 +187,20 @@ class _MyHomePageState extends State<MyHomePage> {
                 ).then((_) {
                   _loadData();
                 });
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.info_outline,
+              ), // Fajnie dodać ikonkę info
+              title: const Text('O nas'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OnasPage(),
+                  ), // Tu musi być nazwa klasy z punktu nr 2
+                );
               },
             ),
           ],

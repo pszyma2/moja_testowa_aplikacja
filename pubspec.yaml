@@ -24,3 +24,5 @@ flutter:
 
   assets:
     - assets/sounds/
+    - assets/images/sukces.png
+
