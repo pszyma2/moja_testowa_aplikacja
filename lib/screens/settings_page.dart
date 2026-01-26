@@ -10,7 +10,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _nameController = TextEditingController();
-  final List<String> _players = ["Paweł", "Aga", "Gość 1", "Gość 2", "Gość 3"];
+  final List<String> _players = ["Paweł", "Aga", "Zuza", "Gaba", "James"];
   String _selectedPlayer = "Paweł";
   @override
   void initState() {
