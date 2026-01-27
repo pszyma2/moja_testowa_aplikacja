@@ -3,9 +3,8 @@ description: "A new Flutter project."
 publish_to: 'none'
 
 version: 1.0.0+1
-
 environment:
-  sdk: ^3.10.0
+  sdk: ^3.5.0 # Podbijamy wersję, żeby nowoczesny kod działał bez zgrzytów
 
 dependencies:
   flutter:
@@ -13,7 +12,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.4
   audioplayers: ^5.2.1
-
+ 
+  
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

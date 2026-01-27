@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/stats_page.dart';
 import 'screens/settings_page.dart';
+
 import 'screens/onas_page.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:moja_testowa_aplikacja/screens/organizer_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -187,6 +189,18 @@ class _MyHomePageState extends State<MyHomePage> {
                 ).then((_) {
                   _loadData();
                 });
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.menu_book),
+              title: const Text('Mój Organizer'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OrganizerPage(),
+                  ),
+                );
               },
             ),
             ListTile(
