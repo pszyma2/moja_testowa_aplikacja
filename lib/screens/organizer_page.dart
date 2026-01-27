@@ -13,8 +13,6 @@ class _OrganizerPageState extends State<OrganizerPage>
   double _dragValue = 0.0;
   int _currentIndex = 2026;
   late AnimationController _controller;
-
-  // MAPA: Rok -> Lista punktów (zapisuje notatki dla każdego roku osobno)
   final Map<int, List<Offset?>> _allNotes = {};
 
   @override
@@ -46,19 +44,21 @@ class _OrganizerPageState extends State<OrganizerPage>
 
   @override
   Widget build(BuildContext context) {
-    // Inicjalizacja listy dla bieżącego roku, jeśli jeszcze nie istnieje
     _allNotes.putIfAbsent(_currentIndex, () => []);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),
       body: Stack(
         children: [
-          // 1. KARTA POD SPODEM (Inny rok)
-          _buildFullPage(
-              _dragValue >= 0 ? _currentIndex + 1 : _currentIndex - 1,
-              isBackground: true),
-
-          // 2. KARTA WIERZCHNIA (Bieżący rok + Twój Waterman)
+          if (_dragValue != 0)
+            _PageContainer(
+              key: ValueKey(
+                  _dragValue > 0 ? _currentIndex + 1 : _currentIndex - 1),
+              year: _dragValue > 0 ? _currentIndex + 1 : _currentIndex - 1,
+              notes: _allNotes[
+                      _dragValue > 0 ? _currentIndex + 1 : _currentIndex - 1] ??
+                  [],
+            ),
           Center(
             child: Transform(
               alignment: _dragValue >= 0
@@ -69,20 +69,21 @@ class _OrganizerPageState extends State<OrganizerPage>
                 ..rotateY(_dragValue * math.pi / 1.5),
               child: GestureDetector(
                 onPanUpdate: (details) {
-                  if (_dragValue.abs() < 0.05) {
-                    setState(() {
-                      _allNotes[_currentIndex]!.add(details.localPosition);
-                    });
+                  if (_dragValue.abs() < 0.02) {
+                    setState(() =>
+                        _allNotes[_currentIndex]!.add(details.localPosition));
                   }
                 },
                 onPanEnd: (details) =>
                     setState(() => _allNotes[_currentIndex]!.add(null)),
-                child: _buildFullPage(_currentIndex),
+                child: _PageContainer(
+                  key: ValueKey(_currentIndex),
+                  year: _currentIndex,
+                  notes: _allNotes[_currentIndex]!,
+                ),
               ),
             ),
           ),
-
-          // 3. DOLNY PASEK DO PRZEWIJANIA
           Align(
             alignment: Alignment.bottomCenter,
             child: GestureDetector(
@@ -103,14 +104,12 @@ class _OrganizerPageState extends State<OrganizerPage>
               child: Container(height: 100, color: Colors.transparent),
             ),
           ),
-
-          // Gumka
           Positioned(
             top: 50,
             right: 20,
-            child: FloatingActionButton.small(
-              backgroundColor: Colors.brown.withOpacity(0.4),
-              child: const Icon(Icons.delete_forever, color: Colors.white70),
+            child: IconButton(
+              icon: const Icon(Icons.delete_sweep,
+                  color: Color(0xFF5D4037), size: 30),
               onPressed: () => setState(() => _allNotes[_currentIndex] = []),
             ),
           ),
@@ -118,73 +117,76 @@ class _OrganizerPageState extends State<OrganizerPage>
       ),
     );
   }
+}
 
-  Widget _buildFullPage(int year, {bool isBackground = false}) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: const Color(0xFFE8D3B9),
-      child: CustomPaint(
-        painter: VintagePagePainter(
-          year: year,
-          // Przekazujemy notatki tylko dla tego konkretnego roku
-          points: _allNotes[year] ?? [],
+class _PageContainer extends StatelessWidget {
+  final int year;
+  final List<Offset?> notes;
+  const _PageContainer({super.key, required this.year, required this.notes});
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            colors: [
+              Color(0xFFF3E5AB),
+              Color(0xFFC1A17B)
+            ], // Efekt "starej skóry/pergaminu"
+            center: Alignment.center,
+            radius: 1.5,
+          ),
+        ),
+        child: Stack(
+          children: [
+            CustomPaint(
+                size: Size.infinite, painter: CalendarPainter(year: year)),
+            CustomPaint(
+                size: Size.infinite, painter: InkPainter(points: notes)),
+          ],
         ),
       ),
     );
   }
 }
 
-class VintagePagePainter extends CustomPainter {
+class CalendarPainter extends CustomPainter {
   final int year;
-  final List<Offset?> points;
-  VintagePagePainter({required this.year, required this.points});
+  CalendarPainter({required this.year});
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Papier
-    canvas.drawRect(
-        Offset.zero & size, Paint()..color = const Color(0xFFE8D3B9));
-
-    // Linie
-    final linePaint = Paint()..color = Colors.brown.withOpacity(0.08);
+    // Linie (delikatniejsze)
+    final linePaint = Paint()
+      ..color = Colors.brown.withOpacity(0.05)
+      ..strokeWidth = 1.0;
     for (double i = 100; i < size.height; i += 22) {
       canvas.drawLine(Offset(0, i), Offset(size.width, i), linePaint);
     }
 
-    // Rok
     final tp = TextPainter(
       text: TextSpan(
           text: "ROK $year",
           style: TextStyle(
-              color: Colors.brown[900]!.withOpacity(0.6),
-              fontSize: 45,
+              color: const Color(0xFF3E2723).withOpacity(0.8),
+              fontSize: 48,
               fontWeight: FontWeight.bold,
               fontFamily: 'Serif',
-              letterSpacing: 5)),
+              letterSpacing: 6)),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, Offset((size.width - tp.width) / 2, 40));
+    tp.paint(canvas, Offset((size.width - tp.width) / 2, 45));
 
-    // Kalendarz (Dni)
     _drawCalendar(canvas, size);
-
-    // ATRAMENT (Tylko dla tego roku)
-    final ink = Paint()
-      ..color = const Color(0xFF002B5B)
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 2.5;
-    for (int i = 0; i < points.length - 1; i++) {
-      if (points[i] != null && points[i + 1] != null) {
-        canvas.drawLine(points[i]!, points[i + 1]!, ink);
-      }
-    }
   }
 
   void _drawCalendar(Canvas canvas, Size size) {
-    double startY = 140;
-    double gridW = size.width / 3.3;
-    double gridH = (size.height - 200) / 4.5;
+    double startY = 150;
+    double gridW = size.width / 3.4;
+    double gridH = (size.height - 200) / 4.6;
     final months = [
       "STYCZEŃ",
       "LUTY",
@@ -199,34 +201,64 @@ class VintagePagePainter extends CustomPainter {
       "LISTOPAD",
       "GRUDZIEŃ"
     ];
+    final daysHeader = ["P", "W", "Ś", "C", "P", "S", "N"];
 
     for (int m = 0; m < 12; m++) {
-      double x = (m % 3) * gridW + 25;
+      double x = (m % 3) * gridW + 28;
       double y = (m ~/ 3) * gridH + startY;
 
+      // Miesiąc
       TextPainter(
           text: TextSpan(
               text: months[m],
               style: const TextStyle(
-                  color: Colors.brown,
-                  fontSize: 9,
+                  color: Color(0xFF5D4037),
+                  fontSize: 10,
                   fontWeight: FontWeight.bold)),
           textDirection: TextDirection.ltr)
         ..layout()
         ..paint(canvas, Offset(x, y));
 
+      // Nagłówek dni tygodnia
+      for (int i = 0; i < 7; i++) {
+        TextPainter(
+          text: TextSpan(
+              text: daysHeader[i],
+              style: TextStyle(
+                  color: i == 6
+                      ? Colors.red.withOpacity(0.5)
+                      : Colors.brown.withOpacity(0.4),
+                  fontSize: 7,
+                  fontWeight: FontWeight.bold)),
+          textDirection: TextDirection.ltr,
+        )
+          ..layout()
+          ..paint(canvas, Offset(x + i * (gridW / 8.5), y + 14));
+      }
+
+      // Daty
       DateTime firstDay = DateTime(year, m + 1, 1);
       int daysInMonth = DateTime(year, m + 2, 0).day;
+      int startOffset = firstDay.weekday - 1;
+
       for (int d = 1; d <= daysInMonth; d++) {
-        int pos = d + firstDay.weekday - 1;
-        double dx = x + ((pos - 1) % 7) * (gridW / 8.5);
-        double dy = y + 15 + ((pos - 1) ~/ 7) * 11;
+        int pos = d + startOffset;
+        int col = (pos - 1) % 7;
+        int row = (pos - 1) ~/ 7;
+        double dx = x + col * (gridW / 8.5);
+        double dy = y + 25 + row * 11;
+
         TextPainter(
-            text: TextSpan(
-                text: "$d",
-                style: TextStyle(
-                    color: Colors.brown[900]!.withOpacity(0.5), fontSize: 7)),
-            textDirection: TextDirection.ltr)
+          text: TextSpan(
+              text: "$d",
+              style: TextStyle(
+                  color: col == 6
+                      ? Colors.red.withOpacity(0.6)
+                      : const Color(0xFF3E2723).withOpacity(0.6),
+                  fontSize: 7.5,
+                  fontFamily: 'Monospace')),
+          textDirection: TextDirection.ltr,
+        )
           ..layout()
           ..paint(canvas, Offset(dx, dy));
       }
@@ -234,6 +266,27 @@ class VintagePagePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(VintagePagePainter old) =>
-      old.points != points || old.year != year;
+  bool shouldRepaint(CalendarPainter old) => old.year != year;
+}
+
+class InkPainter extends CustomPainter {
+  final List<Offset?> points;
+  InkPainter({required this.points});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.isEmpty) return;
+    final ink = Paint()
+      ..color = const Color(0xFF002147)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2.4
+      ..isAntiAlias = true;
+    for (int i = 0; i < points.length - 1; i++) {
+      if (points[i] != null && points[i + 1] != null)
+        canvas.drawLine(points[i]!, points[i + 1]!, ink);
+    }
+  }
+
+  @override
+  bool shouldRepaint(InkPainter old) => true;
 }
